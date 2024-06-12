@@ -1,7 +1,12 @@
+import os
+from pathlib import Path
+
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
+from climada.hazard import Centroids, TCTracks, TropCyclone
 from shapely.geometry import LineString
 
 
@@ -46,16 +51,14 @@ def calculate_mean_for_neighbors(idx, gdf, buffer_size):
             buffer_size
         )  # Adjust buffer size as needed
 
-        # Find neighboring geometries that intersect with the buffer,
-        # excluding the current geometry
+        # Find neighboring geometries that intersect with the buffer, excluding the current geometry
         neighbors = gdf[
             ~gdf.geometry.equals(row["geometry"])
             & gdf.geometry.intersects(buffered)
         ]
 
         if not neighbors.empty:
-            # drop rows with 0 windspeed vals
-            # (we dont want to compute the mean while considering these cells)
+            # drop rows with 0 windspeed vals (we dont want to compute the mean while considering these cells)
             neighbors = neighbors[neighbors["wind_speed"] != 0]
             if len(neighbors) != 0:
                 mean_val = neighbors["wind_speed"].mean()

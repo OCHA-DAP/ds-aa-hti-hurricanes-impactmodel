@@ -7,27 +7,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# Directories
-input_dir = (
-    Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/02_model_features"
-)
-output_dir = (
-    Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/03_model_input_dataset"
-)
-output_dir.mkdir(exist_ok=True)
+from src.utils import blob
+
+PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
 
 def get_bld_data():
     # Read file
-    filename = input_dir / "02_housing_damage/input"
-    bld_by_grid = pd.read_csv(filename / "hti_google_bld_grid_count.csv")
+    bld_dir = (
+        PROJECT_PREFIX + "/google/output_dir/hti_google_bld_grid_count.csv"
+    )
+    bld_by_grid = blob.load_csv(bld_dir)
+
     return bld_by_grid
 
 
 def get_impact_data(weather_constraints=True):
     # Non impacting events
-    filename_events = input_dir / "01_windfield/windfield_data_hti_overlap.csv"
-    df_typhoons = pd.read_csv(filename_events)
+    wind_dir = (
+        PROJECT_PREFIX + "/windfield/output_dir/windfield_data_hti_overlap.csv"
+    )
+    df_typhoons = blob.load_csv(wind_dir)
     df_typhoons = df_typhoons[
         ["typhoon_name", "typhoon_year", "affected_pop"]
     ].drop_duplicates()
@@ -37,17 +37,17 @@ def get_impact_data(weather_constraints=True):
 
     # Impacting events
     if weather_constraints:
-        filename = (
-            input_dir
-            / "02_housing_damage/output/impact_data_grid_step_disaggregation_weather.csv"
+        blob_dir = (
+            PROJECT_PREFIX
+            + "/EMDAT/impact_data_grid_step_disaggregation_weather.csv"
         )
     else:
-        filename = (
-            input_dir
-            / "02_housing_damage/output/impact_data_grid_step_disaggregation_no_weather.csv"
+        blob_dir = (
+            PROJECT_PREFIX
+            + "/EMDAT/impact_data_grid_step_disaggregation_no_weather.csv"
         )
 
-    df_dmg = pd.read_csv(filename)
+    df_dmg = blob.load_csv(blob_dir)
 
     # Add bld data
     df_bld = get_bld_data()
@@ -103,8 +103,10 @@ def get_impact_data(weather_constraints=True):
 
 def get_wind_data():
     # Read file
-    filename = input_dir / "01_windfield/windfield_data_hti_overlap.csv"
-    df_windfield = pd.read_csv(filename)
+    wind_dir = (
+        PROJECT_PREFIX + "/windfield/output_dir/windfield_data_hti_overlap.csv"
+    )
+    df_windfield = blob.load_csv(wind_dir)
     df_windfield = df_windfield.drop("geometry", axis=1)
     df_windfield = df_windfield.drop_duplicates()
     return df_windfield
@@ -112,8 +114,10 @@ def get_wind_data():
 
 def get_rainfall_data():
     # Read file
-    filename = input_dir / "03_rainfall/output/rainfall_data_rw_mean.csv"
-    df_rainfall = pd.read_csv(filename)
+    rain_dir = (
+        PROJECT_PREFIX + "/rainfall/output_dir/rainfall_data_rw_mean.csv"
+    )
+    df_rainfall = blob.load_csv(rain_dir)
     # Clean csv
     df_rainfall[["typhoon_name", "typhoon_year"]] = df_rainfall[
         "typhoon"
@@ -134,21 +138,22 @@ def get_rainfall_data():
 
 
 def get_IWI_data():
-    filename_iwi = input_dir / "05_vulnerability/output/hti_iwi_bygrid_new.csv"
-    df_iwi = pd.read_csv(filename_iwi)
+    iwi_dir = PROJECT_PREFIX + "/vulnerability/output_dir/hti_iwi_bygrid.csv"
+    df_iwi = blob.load_csv(iwi_dir)
     return df_iwi
 
 
 def get_topo_data():
-    filename_topo = (
-        input_dir / "04_topography/output/topography_variables_bygrid.csv"
+    topo_dir = (
+        PROJECT_PREFIX
+        + "/topography/output_dir/topography_variables_bygrid.csv"
     )
-    df_topo = pd.read_csv(filename_topo)
+    df_topo = blob.load_csv(topo_dir)
     df_topo = df_topo.rename({"id": "grid_point_id"}, axis=1)
     return df_topo
 
 
-def merge_features(weather_constraints):
+def merge_features(weather_constraints=True):
     df_damage_all = get_impact_data(weather_constraints=weather_constraints)
     df_windfield = get_wind_data()
     df_rainfall = get_rainfall_data()
@@ -200,18 +205,33 @@ if __name__ == "__main__":
         "total_pop",
         "with_coast",
         "coast_length",
-        "mean_altitude",
+        "mean_elev",
         "mean_slope",
         "mean_rug",
     ]
     df_stationary = df_stationary[features_stationary]
 
     # To csv
-    df_with_weather_cons.to_csv(
-        output_dir / "training_dataset_hti_with_weather_thres.csv", index=False
+    csv_with_weather_cons = df_with_weather_cons.to_csv(index=False)
+    data_with_weather_cons_path = (
+        PROJECT_PREFIX
+        + "/features_combined/training_dataset_hti_with_weather_thres.csv"
     )
-    df_without_weather_cons.to_csv(
-        output_dir / "training_dataset_hti_without_weather_thres.csv",
-        index=False,
+
+    csv_without_weather_cons = df_without_weather_cons.to_csv(index=False)
+    data_without_weather_cons_path = (
+        PROJECT_PREFIX
+        + "/features_combined/training_dataset_hti_without_weather_thres.csv"
     )
-    df_stationary.to_csv(output_dir / "stationary_data_hti.csv", index=False)
+
+    csv_stationary = df_stationary.to_csv(index=False)
+    data_stationary = (
+        PROJECT_PREFIX + "/features_combined/stationary_data_hti.csv"
+    )
+
+    # Save to blob
+    blob.upload_blob_data(data_with_weather_cons_path, csv_with_weather_cons)
+    blob.upload_blob_data(
+        data_without_weather_cons_path, csv_without_weather_cons
+    )
+    blob.upload_blob_data(data_stationary, csv_stationary)

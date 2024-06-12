@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 import geopandas as gpd
@@ -18,6 +19,10 @@ from wind_functions import (
     windfield_to_grid,
 )
 
+from src.utils import blob
+
+PROJECT_PREFIX = "ds-aa-hti-hurricanes"
+
 # input and output dir
 input_dir = (
     Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/02_model_features"
@@ -28,25 +33,16 @@ os.makedirs(output_dir, exist_ok=True)
 
 """     Load grid data and shapefile        """
 # Load grid-land overlap data
-filepath = (
-    input_dir
-    / "02_housing_damage/output/hti_0.1_degree_grid_centroids_land_overlap.gpkg"
-)
-gdf = gpd.read_file(filepath)
+gdf = blob.load_grid_centroids(complete=False)
 # Load all grid data (include oceans)
-filepath_complete = (
-    input_dir / "02_housing_damage/output/hti_0.1_degree_grid_centroids.gpkg"
-)
-gdf_all = gpd.read_file(filepath_complete)
+gdf_all = blob.load_grid_centroids(complete=True)
 
 # Centroids
 cent = Centroids.from_geodataframe(gdf)  # grid-land overlap
 cent_all = Centroids.from_geodataframe(gdf_all)  # include oceans
 
 # Load shapefile
-shp_path = input_dir / "02_housing_damage/input/"
-shp = gpd.read_file(shp_path / "shapefile_hti_fixed.gpkg")
-shp = shp.to_crs("EPSG:4326")
+shp = blob.load_shp()
 
 
 """     Load impact data       """
@@ -54,8 +50,7 @@ shp = shp.to_crs("EPSG:4326")
 
 def load_impact_data():
     # House impact data / Pop impact data
-    housing_path_in = input_dir / "02_housing_damage/input"
-    df_housing = pd.read_csv(housing_path_in / "impact_data_clean_hti.csv")
+    df_housing = blob.load_emdat()
 
     # List of typhoons with impact data > 0
     typhoons_df = (
@@ -67,10 +62,8 @@ def load_impact_data():
     impacting_events["affected_pop"] = True
 
     # List of events with no impact data
-    no_impact_path = output_dir / "hti_distances.csv"
-    df_no_impact = pd.read_csv(no_impact_path).rename(
-        {"name": "typhoon_name"}, axis=1
-    )
+    df_no_impact = blob.load_hti_distances()
+    df_no_impact = df_no_impact.rename({"name": "typhoon_name"}, axis=1)
     df_no_impact = df_no_impact[
         ~df_no_impact.sid.isin(impacting_events.sid.unique())
     ]  # Drop the impact subset
@@ -205,11 +198,23 @@ def proccess_storm_tracks(tc_tracks):
 
         # Define track as climada likes it
         track = TCTracks()
-        track.data = [adjust_tracks(df_t)]
+        track.data = [
+            adjust_tracks(
+                df_t, name=name, custom_sid=custom_sid, custom_idno=custom_idno
+            )
+        ]
 
         # Tracks modified
         tracks.append(track.get_track())
-        return tracks
+    return tracks
+
+
+# Convert DataFrame to CSV in-memory
+def dataframe_to_csv_bytes(dataframe: pd.DataFrame) -> bytes:
+    csv_buffer = BytesIO()
+    dataframe.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)
+    return csv_buffer.getvalue()
 
 
 def create_windfield_features(tracks, non_impacting_events):
@@ -248,8 +253,11 @@ def create_windfield_features(tracks, non_impacting_events):
     ] = df_windfield_interpolated_overlap["affected_pop"].astype(bool)
 
     # Save csv
-    df_windfield_interpolated_overlap.to_csv(
-        output_dir / "windfield_data_hti_overlap.csv", index=False
+    csv_data = dataframe_to_csv_bytes(df_windfield_interpolated_overlap)
+    blob.upload_blob_data(
+        blob_name=PROJECT_PREFIX
+        + "/windfield/output_dir/windfield_data_hti_overlap.csv",
+        data=csv_data,
     )
 
 
@@ -321,10 +329,10 @@ def create_metadata(tracks, all_events):
     df_metadata_fixed_complete = df_metadata_fixed.merge(all_events_meta)
 
     # Save the DataFrame to CSV
-    # Create the directory if it doesn't exist
-    os.makedirs(input_dir / "03_rainfall/input/", exist_ok=True)
-    df_metadata_fixed_complete.to_csv(
-        input_dir / "03_rainfall/input/metadata_typhoons.csv", index=False
+    csv_data = dataframe_to_csv_bytes(df_metadata_fixed_complete)
+    blob.upload_blob_data(
+        blob_name=PROJECT_PREFIX + "/rainfall/input_dir/metadata_typhoons.csv",
+        data=csv_data,
     )
 
 

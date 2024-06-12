@@ -9,34 +9,29 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Directories
-base_dir = (
-    Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/02_model_features/"
-)
-input_dir = base_dir / "05_vulnerability/input/"
-os.makedirs(input_dir, exist_ok=True)
-shp_input_dir = base_dir / "02_housing_damage/output/"
-output_dir = base_dir / "05_vulnerability/output/"
-os.makedirs(output_dir, exist_ok=True)
+from src.utils import blob
+
+PROJECT_PREFIX = "ds-aa-hti-hurricanes"
+
 
 # Load ids of municipalities
-ids_mun = pd.read_csv(
-    base_dir / "02_housing_damage/input/grid_municipality_info.csv"
+ids_mun = blob.load_csv(
+    PROJECT_PREFIX + "/grid/input_dir/grid_municipality_info.csv"
 )
 ids_mun.ADM1_EN = ids_mun.ADM1_EN.str.upper()
 
 # Load grid cells
-grid = gpd.read_file(
-    base_dir / "02_housing_damage/output/hti_0.1_degree_grid_land_overlap.gpkg"
-)
+grid = blob.load_grid(complete=False)
 
 # Load IWI internationa;
-iwi = pd.read_csv(input_dir / "GDL-Mean-International-Wealth-Index-(IWI).csv")
+iwi_dir = (
+    PROJECT_PREFIX
+    + "/vulnerability/input_dir/GDL-Mean-International-Wealth-Index-(IWI).csv"
+)
+iwi = blob.load_csv(iwi_dir)
 
 # Load Shapefile
-shp = gpd.read_file(
-    base_dir / "02_housing_damage/input/shapefile_hti_fixed.gpkg"
-)
+shp = blob.load_shp()
 shp = shp.to_crs("EPSG:4326")
 
 
@@ -72,10 +67,10 @@ def get_IWI(country="Haiti"):
         .rename({"id": "grid_point_id", "2020": "IWI"}, axis=1)
     )
 
-    # Save to csv
-    IWI_shp[["grid_point_id", "IWI"]].to_csv(
-        output_dir / "hti_iwi_bygrid.csv", index=False
-    )
+    # Save to blob
+    csv_data = IWI_shp[["grid_point_id", "IWI"]].to_csv(index=False)
+    blob_path = PROJECT_PREFIX + "/vulnerability/output_dir/hti_iwi_bygrid.csv"
+    blob.upload_blob_data(blob_path, csv_data)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -9,6 +10,10 @@ import pandas as pd
 from climada.hazard import Centroids, Hazard, TCTracks, TropCyclone
 from climada_petals.hazard import TCForecast
 from shapely.geometry import LineString, Point, Polygon
+
+from src.utils import blob
+
+PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
 
 def trigger(df_windfield):
@@ -23,11 +28,6 @@ def create_windfield_dataset(thres=120, deg=3):
     # Calculate the current date
     today = datetime.now().strftime("%Y%m%d")
 
-    # Directories
-    grid_dir = (
-        Path(os.getenv("STORM_DATA_DIR"))
-        / "analysis_hti/02_model_features/02_housing_damage/output/"
-    )
     output_dir = Path(
         os.getenv("STORM_DATA_DIR")
     ) / "analysis_hti/05_realtime_forecasts/windspeed/{}".format(today)
@@ -35,8 +35,8 @@ def create_windfield_dataset(thres=120, deg=3):
     # Constant
     DEG_TO_KM = 111.1
 
-    # Load grids
-    grids = gpd.read_file(grid_dir / "hti_0.1_degree_grid_land_overlap.gpkg")
+    # Load grid cells
+    grids = blob.load_grid(complete=False)
     grids.geometry = grids.geometry.to_crs(grids.crs).centroid
 
     try:
@@ -129,13 +129,21 @@ def create_windfield_dataset(thres=120, deg=3):
 
         # Save results if there are results
         if trigger(df_windfield=df_windfield):
-            output_dir.mkdir(exist_ok=True)
-            df_windfield.to_csv(output_dir / "wind_data.csv")
+            csv_data = df_windfield.to_csv(index=False)
+            wind_dir = (
+                f"{PROJECT_PREFIX}/windfield/ECMWF/{today}/wind_data.csv"
+            )
+            blob.upload_blob_data(wind_dir, csv_data)
+            print("High windspeed detected in the region of interest")
+            return True
 
         else:
             print("{}: Wind Trigger not activated".format(today))
-    except:
+            return False
+
+    except Exception as e:
         print("ECMWF not responding")
+        raise ValueError("ECMWF not responding") from e
 
 
 # Load data
@@ -144,9 +152,6 @@ today = datetime.now().strftime("%Y%m%d")
 
 
 def load_windspeed_data(date=today):
-    wind_dir = Path(
-        os.getenv("STORM_DATA_DIR")
-    ) / "analysis_hti/05_realtime_forecasts/windspeed/{}".format(date)
-
-    df_wind = pd.read_csv(wind_dir / "wind_data.csv")
+    wind_dir = f"{PROJECT_PREFIX}/windfield/ECMWF/{date}/wind_data.csv"
+    df_wind = blob.load_csv(wind_dir)
     return df_wind

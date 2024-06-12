@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from io import BytesIO
 from pathlib import Path
 
 import geopandas as gpd
@@ -8,35 +9,30 @@ import pandas as pd
 import rasterio
 from rasterstats import zonal_stats
 
-# Directories
-base_dir = (
-    Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/02_model_features/"
-)
-input_dir = base_dir / "06_settlement/input/"
-os.makedirs(input_dir, exist_ok=True)
-shp_input_dir = base_dir / "02_housing_damage/input/"
-grid_input_dir = base_dir / "02_housing_damage/output/"
-output_dir = base_dir / "06_settlement/output/"
-os.makedirs(output_dir, exist_ok=True)
+from src.utils import blob
+
+PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
 # Load Shapefile
-shp = gpd.read_file(shp_input_dir / "shapefile_hti_fixed.gpkg")
+shp = blob.load_shp()
 shp = shp.to_crs("EPSG:4326")
 
 # Load grid cells
-grid = gpd.read_file(grid_input_dir / "hti_0.1_degree_grid_land_overlap.gpkg")
+grid_land_overlap = blob.load_grid(complete=False)
 
 # Load ids of municipalities
-ids_mun = pd.read_csv(
-    base_dir / "02_housing_damage/input/grid_municipality_info.csv"
+ids_mun = blob.load_csv(
+    PROJECT_PREFIX + "/grid/input_dir/grid_municipality_info.csv"
 )
 ids_mun.ADM1_EN = ids_mun.ADM1_EN.str.upper()
 
 # Load impact data
-df_impact = pd.read_csv(shp_input_dir / "impact_data_clean_hti.csv")
+df_impact = blob.load_emdat()
 
 # Load population data
-grid_pop_df = pd.read_csv(output_dir / "hti_population_data.csv")
+grid_pop_df = blob.load_csv(
+    PROJECT_PREFIX + "/settlement/output_dir/hti_population_data.csv"
+)
 
 
 # Add Total pop by ADM1/ADM2 region feature to impact dataset
@@ -170,17 +166,22 @@ def impact_to_grid(grid_pop_df):
         )
 
     # No Weather constraints
-    impact_data_grid_no_weather.to_csv(
-        grid_input_dir / "impact_data_grid_step_disaggregation_no_weather.csv",
-        index=False,
+    csv_data = impact_data_grid_no_weather.to_csv(index=False)
+    blob_path = (
+        PROJECT_PREFIX
+        + "/EMDAT/impact_data_grid_step_disaggregation_no_weather.csv"
     )
+
+    # Upload the CSV data to blob storage
+    blob.upload_blob_data(blob_name=blob_path, data=csv_data)
 
 
 def load_weather_features():
     # Load windspeed
-    df_wind = pd.read_csv(
-        base_dir / "01_windfield/windfield_data_hti_overlap.csv"
+    wind_path = (
+        PROJECT_PREFIX + "/windfield/output_dir/windfield_data_hti_overlap.csv"
     )
+    df_wind = blob.load_csv(wind_path)
     df_wind = df_wind.rename(
         {"track_id": "sid", "grid_point_id": "id"}, axis=1
     )
@@ -189,9 +190,10 @@ def load_weather_features():
     ].astype("str")
 
     # Load rainfall
-    df_rain = pd.read_csv(
-        base_dir / "03_rainfall/output/rainfall_data_rw_mean.csv"
+    rain_path = (
+        PROJECT_PREFIX + "/rainfall/output_dir/rainfall_data_rw_mean.csv"
     )
+    df_rain = blob.load_csv(rain_path)
 
     # Merge
     df_weather = df_wind.merge(df_rain, on=["typhoon", "id"])
@@ -310,11 +312,15 @@ def impact_to_grid_weather_constraints(grid_pop_df):
         pop_damage_merged_adm1_fixed, how="right"
     )[impact_data_grid.columns].fillna(0)
 
-    # Save it to a csv
-    impact_data_grid.to_csv(
-        grid_input_dir / "impact_data_grid_step_disaggregation_weather.csv",
-        index=False,
+    # + Weather constraints
+    csv_data = impact_data_grid.to_csv(index=False)
+    blob_path = (
+        PROJECT_PREFIX
+        + "/EMDAT/impact_data_grid_step_disaggregation_weather.csv"
     )
+
+    # Upload the CSV data to blob storage
+    blob.upload_blob_data(blob_name=blob_path, data=csv_data)
 
 
 if __name__ == "__main__":
