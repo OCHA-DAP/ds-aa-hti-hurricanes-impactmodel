@@ -19,15 +19,19 @@ Here we apply a grid-based approach to predict TC impact on population. Some con
 
 How to replicate the model? --> Follow these steps:
 
-- Create a global enviroment called STORM_DATA_DIR that points to the data folder. Data is in this Drive: https://drive.google.com/drive/folders/1xaZ_y45Goqs8rO0ICW3egMfBjiWAKSdE?usp=sharing
+- You need a SAS key to the blob storage (contact us)
 
-- Create/define the grid cells by running the *create_grid.py* script inside the **utils** folder.
+- Create a *.env* file with the key poiting to a variable called **PROD_BLOB_SAS**
+
+- Create/define the grid cells by running the *grid.py* script inside the **utils** folder.
 
 - To get the features, run every .py file inside each datasource (see datasource folder).
 
 - Merge the features by running the *merge_features.py* script inside the **utils** folder.
 
-- Run *model.py*. The results/predicitons are stored in *analysis_hti/04_model_output_dataset/*
+- Run *model_training.py* to train the model.
+
+- To run the model on real time forecasts, run *main.py*.
 
 
 
