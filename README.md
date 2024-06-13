@@ -10,6 +10,7 @@ The code in this repository is organized as follows:
 ├── docs          # .Rmd files or other relevant documentation
 ├── exploration   # Experimental work not intended to be replicated
 ├── src           # Code to run any relevant data acquisition/processing pipelines
+├── main.py       # Code to predict impact data based on realtime forecasts
 |
 ├── .gitignore
 ├── README.md
