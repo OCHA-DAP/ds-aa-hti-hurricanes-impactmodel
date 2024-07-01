@@ -34,5 +34,4 @@ How to replicate the model? --> Follow these steps:
 - To run the model on real time forecasts, run *main.py*.
 
 
-
 [1] Towards a global impact-based forecasting model for tropical cyclones. Kooshki Forooshani, Mersedeh and van den Homberg, Marc and Kalimeri, Kyriaki and Kaltenbrunner, Andreas and Mejova, Yelena and Milano, Leonardo and Ndirangu, Pauline and Paolotti, Daniela and Teklesadik, Aklilu and Turner, Monica L. Natural Hazards and Earth System Sciences, 2024.

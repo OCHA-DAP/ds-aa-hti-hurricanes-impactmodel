@@ -1,0 +1,44 @@
+name: Predictions on affected population from grid-based 2STG-XGB model
+
+on:
+  workflow_dispatch: # Manually trigger the workflow
+  push:
+    branches:
+      - fede-implementation
+  # schedule:
+  #   - cron: '0 0 * * *' # Runs at midnight UTC daily
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: fede-implementation # Checkout the specific branch
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11.5'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          pip install -r requirements.txt
+
+      - name: Run Python script
+        env:
+          DEV_BLOB_SAS: ${{ secrets.ISI_BLOB_SAS }} # Set up environment variables
+        run: |
+          python main.py
+
+      - name: Save output as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: forecast-output
+          path: |
+            output_*.txt
+            output_*.zip

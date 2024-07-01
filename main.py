@@ -118,7 +118,70 @@ def predict_new_data(
             # For events with no dmg predictions
             final_predictions = not_filtered_new_data
 
+    # Add grid information
+    final_predictions["grid_point_id"] = new_data["grid_point_id"]
     return final_predictions
+
+
+# Aggregate predictions to adm1 level + add pre-defined bootstrapping error
+def aggregate_predictions_adm1(final_predictions):
+    # Load ids of municipalities
+    ids_mun = blob.load_csv(
+        PROJECT_PREFIX + "/grid/input_dir/grid_municipality_info.csv"
+    )[["id", "ADM1_PCODE"]]
+
+    # Actual number of people affected
+    final_predictions["N_people_affected_predicted"] = (
+        final_predictions["predicted_percent_aff"]
+        * final_predictions["total_pop"]
+        / 100
+    )
+
+    # Merge with municipality info
+    df_merged = final_predictions.merge(
+        ids_mun, left_on="grid_point_id", right_on="id"
+    )
+
+    df_adm1 = df_merged.groupby("ADM1_PCODE").sum()[
+        ["ADM1_PCODE", "total_pop", "N_people_affected_predicted"]
+    ]
+
+    df_adm1["perc_mun_affected"] = (
+        100 * df_adm1["N_people_affected_predicted"] / df_adm1["total_pop"]
+    )
+
+    # Fix predictions (just in case, but it should work without this)
+    df_adm1.loc[df_adm1["perc_mun_affected"] > 100, "perc_mun_affected"] = 100
+    df_adm1.loc[df_adm1["perc_mun_affected"] < 0, "perc_mun_affected"] = 0
+
+    # Add Bootstrapping error
+    # Pre-defined model-related bootstrapping error
+    bin_errors = {"0 - 1": 0.03, "1 - 10": 1.44, "10 - 100": 4.80}
+
+    # Function to determine bin error
+    def get_bin_error(value):
+        if 0 <= value < 1:
+            return bin_errors["0 - 1"]
+        elif 1 <= value < 10:
+            return bin_errors["1 - 10"]
+        elif 10 <= value <= 100:
+            return bin_errors["10 - 100"]
+        else:
+            return None
+
+    # Add Bootstrapping error
+    df_adm1["model_error[%]"] = df_adm1["perc_mun_affected"].apply(
+        get_bin_error
+    )
+
+    return df_adm1[
+        [
+            "ADM1_PCODE",
+            "perc_mun_affected",
+            "N_people_affected_predicted",
+            "model_error[%]",
+        ]
+    ]
 
 
 if __name__ == "__main__":
@@ -132,9 +195,11 @@ if __name__ == "__main__":
             df_input = create_input_dataset()
             # Predict on trained model
             df_pred = predict_new_data(new_data=df_input)
+            # Aggregate predictions to ADM1 level
+            df_pred_adm1 = aggregate_predictions_adm1(df_pred)
 
             # Save predictions
-            csv_data = df_pred.to_csv(index=False)
+            csv_data = df_pred_adm1.to_csv(index=False)
             csv_dir = (
                 PROJECT_PREFIX
                 + "/model/predictions/impact_predictions_{}.csv".format(today)
