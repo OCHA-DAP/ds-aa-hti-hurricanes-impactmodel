@@ -26,11 +26,7 @@ def trigger(df_windfield):
 
 def create_windfield_dataset(thres=120, deg=3):
     # Calculate the current date
-    today = datetime.now().strftime("%Y%m%d")
-
-    output_dir = Path(
-        os.getenv("STORM_DATA_DIR")
-    ) / "analysis_hti/05_realtime_forecasts/windspeed/{}".format(today)
+    today_just_date = datetime.now().strftime("%Y%m%d")
 
     # Constant
     DEG_TO_KM = 111.1
@@ -131,14 +127,14 @@ def create_windfield_dataset(thres=120, deg=3):
         if trigger(df_windfield=df_windfield):
             csv_data = df_windfield.to_csv(index=False)
             wind_dir = (
-                f"{PROJECT_PREFIX}/windfield/ECMWF/{today}/wind_data.csv"
+                f"{PROJECT_PREFIX}/windfield/ECMWF/{today_just_date}/wind_data.csv"
             )
             blob.upload_blob_data(wind_dir, csv_data)
             print("High windspeed detected in the region of interest")
             return True
 
         else:
-            print("{}: Wind Trigger not activated".format(today))
+            print("{}: Wind Trigger not activated".format(today_just_date))
             return False
 
     except Exception as e:
@@ -149,7 +145,6 @@ def create_windfield_dataset(thres=120, deg=3):
 # Load data
 # Calculate the current date
 today = datetime.now().strftime("%Y%m%d")
-
 
 def load_windspeed_data(date=today):
     wind_dir = f"{PROJECT_PREFIX}/windfield/ECMWF/{date}/wind_data.csv"

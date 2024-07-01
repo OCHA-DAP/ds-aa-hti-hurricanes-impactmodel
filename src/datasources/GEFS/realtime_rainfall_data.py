@@ -289,7 +289,8 @@ def create_rainfall_dataset(event_metadata, PROJECT_PREFIX=PROJECT_PREFIX):
                 )
 
             # Saving the final rainfall dataset to blob storage
-            final_path = f"{PROJECT_PREFIX}/rainfall/GEFS/{today}/rainfall_data_rw_{stats}.csv"
+            today_just_date = datetime.now().strftime("%Y%m%d")
+            final_path = f"{PROJECT_PREFIX}/rainfall/GEFS/{today_just_date}/rainfall_data_rw_{stats}.csv"
             csv_data = df_rainfall_final.to_csv(index=False)
             blob.upload_blob_data(blob_name=final_path, data=csv_data)
 
@@ -297,12 +298,9 @@ def create_rainfall_dataset(event_metadata, PROJECT_PREFIX=PROJECT_PREFIX):
 # Load data
 # Calculate the current date
 today = datetime.now().strftime("%Y%m%d")
-
-
 def load_rainfall_data(date=today):
     # We are just interested in the spatial mean of the accmulated rainfall by grid
-    rain_dir = blob.load_csv(
-        f"{PROJECT_PREFIX}/rainfall/GEFS/{today}/rainfall_data_rw_mean.csv"
+    df_rain = blob.load_csv(
+        f"{PROJECT_PREFIX}/rainfall/GEFS/{date}/rainfall_data_rw_mean.csv"
     )
-    df_rain = blob.load_csv(rain_dir)
     return df_rain

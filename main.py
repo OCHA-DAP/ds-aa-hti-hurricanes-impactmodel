@@ -35,15 +35,21 @@ def create_input_dataset():
     )
     df_stationary = blob.load_csv(stationary_dir).drop_duplicates()
 
-    # Load realtime forecasts
+    # Load realtime wind forecasts
     today = datetime.now().strftime("%Y%m%d")
     df_windfield = wind.load_windspeed_data(date=today)
-    df_rainfall = rain.load_rainfall_data(date=today)
-    df_forecast = df_rainfall.merge(
-        df_windfield, left_on="id", right_on="grid_point_id"
-    )
 
-    # Merge features
+    # Load realtime rain forecasts
+    event_metadata = rain.create_metadata(df_windfield)
+    rain.create_rainfall_dataset(event_metadata=event_metadata)
+    df_rainfall = rain.load_rainfall_data(date=today)
+    
+    # Merge wind and rainfall forecast data
+    df_forecast = df_windfield.merge(df_rainfall, 
+                    left_on=['unique_id', 'grid_point_id'],
+                    right_on=['event', 'id'])
+
+    # Merge all features
     df_input = df_stationary.merge(df_forecast)
     return df_input
 
@@ -137,22 +143,34 @@ def aggregate_predictions_adm1(final_predictions):
         / 100
     )
 
+    # If N people affected predicted is < 0 --> set it to 0
+    final_predictions.loc[final_predictions["N_people_affected_predicted"] < 0, 'N_people_affected_predicted'] = 0
+
     # Merge with municipality info
     df_merged = final_predictions.merge(
         ids_mun, left_on="grid_point_id", right_on="id"
     )
+    # For each storm, aggregate to ADM1
+    df_adm1 = pd.DataFrame()
+    for event in df_merged.unique_id.unique():
 
-    df_adm1 = df_merged.groupby("ADM1_PCODE").sum()[
-        ["ADM1_PCODE", "total_pop", "N_people_affected_predicted"]
-    ]
+        df_event = df_merged[df_merged.unique_id == event]
 
-    df_adm1["perc_mun_affected"] = (
-        100 * df_adm1["N_people_affected_predicted"] / df_adm1["total_pop"]
-    )
+        df_adm1_event = df_event.groupby("ADM1_PCODE").sum()[
+            ["total_pop", "N_people_affected_predicted"]
+        ].reset_index()
 
-    # Fix predictions (just in case, but it should work without this)
-    df_adm1.loc[df_adm1["perc_mun_affected"] > 100, "perc_mun_affected"] = 100
-    df_adm1.loc[df_adm1["perc_mun_affected"] < 0, "perc_mun_affected"] = 0
+        df_adm1_event["perc_mun_affected"] = (
+            100 * df_adm1_event["N_people_affected_predicted"] / df_adm1_event["total_pop"]
+        )
+
+        # Fix predictions (just in case, but it should work without this)
+        df_adm1_event.loc[df_adm1_event["perc_mun_affected"] > 100, "perc_mun_affected"] = 100
+        df_adm1_event.loc[df_adm1_event["perc_mun_affected"] < 0, "perc_mun_affected"] = 0
+        
+        # Concatenate all events
+        df_adm1_event['unique_id'] = event
+        df_adm1 = pd.concat([df_adm1, df_adm1_event])
 
     # Add Bootstrapping error
     # Pre-defined model-related bootstrapping error
@@ -176,12 +194,13 @@ def aggregate_predictions_adm1(final_predictions):
 
     return df_adm1[
         [
+            "unique_id",
             "ADM1_PCODE",
             "perc_mun_affected",
             "N_people_affected_predicted",
             "model_error[%]",
         ]
-    ]
+    ].reset_index(drop=True)
 
 
 if __name__ == "__main__":
@@ -209,7 +228,7 @@ if __name__ == "__main__":
             # Create a TXT file with a message
             with open(f"output_{today}.txt", "w") as txt_file:
                 txt_file.write(
-                    f"Trigger activatedt. Check blob storage for output.\nDate={today}"
+                    f"Trigger activated. Check blob storage for output.\nDate={today}"
                 )
         else:
             # Create a TXT file with a message
