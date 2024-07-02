@@ -298,6 +298,8 @@ def create_rainfall_dataset(event_metadata, PROJECT_PREFIX=PROJECT_PREFIX):
 # Load data
 # Calculate the current date
 today = datetime.now().strftime("%Y%m%d")
+
+
 def load_rainfall_data(date=today):
     # We are just interested in the spatial mean of the accmulated rainfall by grid
     df_rain = blob.load_csv(

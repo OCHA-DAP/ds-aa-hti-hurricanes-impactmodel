@@ -51,9 +51,11 @@ def create_windfield_dataset(thres=120, deg=3):
         for i in range(n_events):
             data_event = tc_fcast.data[i]
             # Elements to consider
+            # Only points that fll in the max timedelta range defined by thres (in h)
             index_thres = len(
                 np.where(np.array(data_event.time) < threshold_datetime)[0]
             )
+            # Only tracks that have at least 4 datapoints (arbitrary)
             if index_thres > 4:  # Events with at least 4 datapoints
                 data_event_thres = data_event.isel(time=slice(0, index_thres))
                 xarray_data_list.append(data_event_thres)
@@ -80,6 +82,7 @@ def create_windfield_dataset(thres=120, deg=3):
         )
 
         df_windfield = pd.DataFrame()
+        df_track = pd.DataFrame()
         for i, intensity_sparse in enumerate(tc.intensity):
             # Get the windfield
             windfield = intensity_sparse.toarray().flatten()
@@ -93,9 +96,14 @@ def create_windfield_dataset(thres=120, deg=3):
             tc_track_distance = grids["geometry"].apply(
                 lambda point: point.distance(tc_track_line) * DEG_TO_KM
             )
+            # Ensemble member
+            ensemble_n = tc_track.ensemble_number
 
             # Basin
             basin = np.unique(tc_track.basin)
+
+            # Category
+            cat = tc_track.category
 
             # Adquisition Period
             time0 = np.unique(tc_track.time)[0]
@@ -107,8 +115,10 @@ def create_windfield_dataset(thres=120, deg=3):
             # Add to DF
             df_to_add = pd.DataFrame(
                 dict(
-                    event_id_ecmwf=[event_id] * npoints,
                     unique_id=[i] * npoints,
+                    event_id_ecmwf=[event_id] * npoints,
+                    ensemble_member = [ensemble_n] * npoints,
+                    category = [cat] * npoints,
                     basins=[basin.tolist()] * npoints,
                     time_init=[time0] * npoints,
                     time_end=[time1] * npoints,
@@ -123,13 +133,31 @@ def create_windfield_dataset(thres=120, deg=3):
                 [df_windfield, df_to_add], ignore_index=True
             )
 
+            # Auxiliary dataframe (track related)
+            ntrack_points = len(points)
+            dict_aux = {
+                'unique_id':[i] * ntrack_points,
+                'event_id_ecmwf':[event_id] * ntrack_points,
+                'ensemble_member': [ensemble_n] * ntrack_points,
+                'in_roi':[intersects_roi] * ntrack_points,
+                'geometry':points,
+                'time':np.array(tc_track.time),
+                'windspeed':np.array(tc_track.max_sustained_wind)
+            }
+            df_aux = pd.DataFrame(dict_aux)
+            df_track = pd.concat([df_track, df_aux])
+
+
         # Save results if there are results
         if trigger(df_windfield=df_windfield):
             csv_data = df_windfield.to_csv(index=False)
-            wind_dir = (
-                f"{PROJECT_PREFIX}/windfield/ECMWF/{today_just_date}/wind_data.csv"
-            )
+            wind_dir = f"{PROJECT_PREFIX}/windfield/ECMWF/{today_just_date}/wind_data.csv"
             blob.upload_blob_data(wind_dir, csv_data)
+
+            track_dir = f"{PROJECT_PREFIX}/windfield/ECMWF/{today_just_date}/track_data.csv"
+            track_data = df_track.to_csv(index=False)
+            blob.upload_blob_data(track_dir, track_data)
+
             print("High windspeed detected in the region of interest")
             return True
 
@@ -145,6 +173,7 @@ def create_windfield_dataset(thres=120, deg=3):
 # Load data
 # Calculate the current date
 today = datetime.now().strftime("%Y%m%d")
+
 
 def load_windspeed_data(date=today):
     wind_dir = f"{PROJECT_PREFIX}/windfield/ECMWF/{date}/wind_data.csv"

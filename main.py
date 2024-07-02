@@ -43,11 +43,13 @@ def create_input_dataset():
     event_metadata = rain.create_metadata(df_windfield)
     rain.create_rainfall_dataset(event_metadata=event_metadata)
     df_rainfall = rain.load_rainfall_data(date=today)
-    
+
     # Merge wind and rainfall forecast data
-    df_forecast = df_windfield.merge(df_rainfall, 
-                    left_on=['unique_id', 'grid_point_id'],
-                    right_on=['event', 'id'])
+    df_forecast = df_windfield.merge(
+        df_rainfall,
+        left_on=["unique_id", "grid_point_id"],
+        right_on=["event", "id"],
+    )
 
     # Merge all features
     df_input = df_stationary.merge(df_forecast)
@@ -155,6 +157,8 @@ def aggregate_predictions_adm1(final_predictions):
     for event in df_merged.unique_id.unique():
 
         df_event = df_merged[df_merged.unique_id == event]
+        ecmwf_id = df_event.event_id_ecmwf.unique()[0]
+        ensemble_n = df_event.ensemble_member.unique()[0]
 
         df_adm1_event = df_event.groupby("ADM1_PCODE").sum()[
             ["total_pop", "N_people_affected_predicted"]
@@ -170,6 +174,8 @@ def aggregate_predictions_adm1(final_predictions):
         
         # Concatenate all events
         df_adm1_event['unique_id'] = event
+        df_adm1_event['event_id_ecmwf'] = ecmwf_id
+        df_adm1_event['ensemble_member'] = ensemble_n
         df_adm1 = pd.concat([df_adm1, df_adm1_event])
 
     # Add Bootstrapping error
@@ -195,6 +201,8 @@ def aggregate_predictions_adm1(final_predictions):
     return df_adm1[
         [
             "unique_id",
+            "event_id_ecmwf",
+            "ensemble_member",
             "ADM1_PCODE",
             "perc_mun_affected",
             "N_people_affected_predicted",
