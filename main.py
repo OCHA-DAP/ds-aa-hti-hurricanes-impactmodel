@@ -146,7 +146,10 @@ def aggregate_predictions_adm1(final_predictions):
     )
 
     # If N people affected predicted is < 0 --> set it to 0
-    final_predictions.loc[final_predictions["N_people_affected_predicted"] < 0, 'N_people_affected_predicted'] = 0
+    final_predictions.loc[
+        final_predictions["N_people_affected_predicted"] < 0,
+        "N_people_affected_predicted",
+    ] = 0
 
     # Merge with municipality info
     df_merged = final_predictions.merge(
@@ -155,27 +158,34 @@ def aggregate_predictions_adm1(final_predictions):
     # For each storm, aggregate to ADM1
     df_adm1 = pd.DataFrame()
     for event in df_merged.unique_id.unique():
-
         df_event = df_merged[df_merged.unique_id == event]
         ecmwf_id = df_event.event_id_ecmwf.unique()[0]
         ensemble_n = df_event.ensemble_member.unique()[0]
 
-        df_adm1_event = df_event.groupby("ADM1_PCODE").sum()[
-            ["total_pop", "N_people_affected_predicted"]
-        ].reset_index()
+        df_adm1_event = (
+            df_event.groupby("ADM1_PCODE")
+            .sum()[["total_pop", "N_people_affected_predicted"]]
+            .reset_index()
+        )
 
         df_adm1_event["perc_mun_affected"] = (
-            100 * df_adm1_event["N_people_affected_predicted"] / df_adm1_event["total_pop"]
+            100
+            * df_adm1_event["N_people_affected_predicted"]
+            / df_adm1_event["total_pop"]
         )
 
         # Fix predictions (just in case, but it should work without this)
-        df_adm1_event.loc[df_adm1_event["perc_mun_affected"] > 100, "perc_mun_affected"] = 100
-        df_adm1_event.loc[df_adm1_event["perc_mun_affected"] < 0, "perc_mun_affected"] = 0
-        
+        df_adm1_event.loc[
+            df_adm1_event["perc_mun_affected"] > 100, "perc_mun_affected"
+        ] = 100
+        df_adm1_event.loc[
+            df_adm1_event["perc_mun_affected"] < 0, "perc_mun_affected"
+        ] = 0
+
         # Concatenate all events
-        df_adm1_event['unique_id'] = event
-        df_adm1_event['event_id_ecmwf'] = ecmwf_id
-        df_adm1_event['ensemble_member'] = ensemble_n
+        df_adm1_event["unique_id"] = event
+        df_adm1_event["event_id_ecmwf"] = ecmwf_id
+        df_adm1_event["ensemble_member"] = ensemble_n
         df_adm1 = pd.concat([df_adm1, df_adm1_event])
 
     # Add Bootstrapping error

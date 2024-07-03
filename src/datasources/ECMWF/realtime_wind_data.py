@@ -117,8 +117,8 @@ def create_windfield_dataset(thres=120, deg=3):
                 dict(
                     unique_id=[i] * npoints,
                     event_id_ecmwf=[event_id] * npoints,
-                    ensemble_member = [ensemble_n] * npoints,
-                    category = [cat] * npoints,
+                    ensemble_member=[ensemble_n] * npoints,
+                    category=[cat] * npoints,
                     basins=[basin.tolist()] * npoints,
                     time_init=[time0] * npoints,
                     time_end=[time1] * npoints,
@@ -136,17 +136,16 @@ def create_windfield_dataset(thres=120, deg=3):
             # Auxiliary dataframe (track related)
             ntrack_points = len(points)
             dict_aux = {
-                'unique_id':[i] * ntrack_points,
-                'event_id_ecmwf':[event_id] * ntrack_points,
-                'ensemble_member': [ensemble_n] * ntrack_points,
-                'in_roi':[intersects_roi] * ntrack_points,
-                'geometry':points,
-                'time':np.array(tc_track.time),
-                'windspeed':np.array(tc_track.max_sustained_wind)
+                "unique_id": [i] * ntrack_points,
+                "event_id_ecmwf": [event_id] * ntrack_points,
+                "ensemble_member": [ensemble_n] * ntrack_points,
+                "in_roi": [intersects_roi] * ntrack_points,
+                "geometry": points,
+                "time": np.array(tc_track.time),
+                "windspeed": np.array(tc_track.max_sustained_wind),
             }
             df_aux = pd.DataFrame(dict_aux)
             df_track = pd.concat([df_track, df_aux])
-
 
         # Save results if there are results
         if trigger(df_windfield=df_windfield):
