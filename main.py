@@ -190,7 +190,7 @@ def aggregate_predictions_adm1(final_predictions):
 
     # Add Bootstrapping error
     # Pre-defined model-related bootstrapping error
-    bin_errors = {"0 - 1": 0.03, "1 - 10": 1.44, "10 - 100": 4.80}
+    bin_errors = {'0 - 1': 0.0005899648046201837, '1 - 10': 3.0495144741566236, '10 - 100': 3.6096526932232296}
 
     # Function to determine bin error
     def get_bin_error(value):
