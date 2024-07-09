@@ -23,14 +23,6 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
-# input and output dir
-input_dir = (
-    Path(os.getenv("STORM_DATA_DIR")) / "analysis_hti/02_model_features"
-)
-output_dir = input_dir / "01_windfield"
-# Create the directory if it doesn't exist
-os.makedirs(output_dir, exist_ok=True)
-
 """     Load grid data and shapefile        """
 # Load grid-land overlap data
 gdf = blob.load_grid_centroids(complete=False)
@@ -176,7 +168,7 @@ def proccess_storm_tracks(tc_tracks):
         df_t = pd.DataFrame(
             {
                 "MeanWind": new_w,
-                "PressureOCI": new_ep,
+                "Pressure_env": new_ep,
                 "Pressure": new_cp,
                 "Latitude": new_lat,
                 "Longitude": new_lon,

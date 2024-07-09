@@ -100,7 +100,7 @@ def adjust_tracks(forecast_df, name="", custom_sid="", custom_idno=""):
             ),  # 0.514444 --> kn to m/s
             "environmental_pressure": (
                 "time",
-                forecast_df.PressureOCI.values,
+                forecast_df.Pressure_env.values,
             ),  # I assume its enviromental pressure
             "central_pressure": ("time", forecast_df.Pressure.values),
             "lat": ("time", forecast_df.Latitude.values),
