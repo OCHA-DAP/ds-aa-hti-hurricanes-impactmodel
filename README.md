@@ -1,7 +1,7 @@
 # Haiti Anticipatory Action: hurricanes - impact model
 
 Here we create and define a model for prediciting impact (in the form of affected population) caused by hurricanes in Haiti.
-The model is essentially a 2-stage-grid-based-XGBoost. This model was previously defined for the Philippines in [1].
+The model is essentially a 2-stage-grid-based-XGBoost. This model was previously defined for the Philippines in [[1]](https://www.researchgate.net/publication/378179311_Towards_a_global_impact-based_forecasting_model_for_tropical_cyclones).
 
 The output of the model is predictions for affected population at administrative 1 level.
 
@@ -63,7 +63,7 @@ Here we defined the YAML file for the automation of the running of the *main.py*
 
 ### **exploration** folder
 
-Here we study the historical impact data that we use as the target variable of our model. This data comes from the EMDAT database and consists of the total affected population (as defined by EMDAT, sum of: Total Deaths, No. Injured, No. Affected, No. Homeless) in cases os hurrcanes in Haiti. We have impact information for 24 events between the years 2002-2021.
+Here we study the historical impact data that we use as the target variable of our model. This data comes from the EMDAT database and consists of the total affected population (as defined by EMDAT, sum of: Total Deaths, No. Injured, No. Affected, No. Homeless) in cases of hurricanes in Haiti. We have impact information for 24 events between the years 2002-2021.
 
 We also studied the return periods of these events based on the maximum recorded windspeed of each one.
 
@@ -95,6 +95,7 @@ before committing them into version control. This will make for
 cleaner diffs (and thus easier code reviews) and will ensure that cell outputs aren't
 committed to the repo (which might be problematic if working with sensitive data).
 
+---
 
 [1] Towards a global impact-based forecasting model for tropical cyclones. Kooshki Forooshani, Mersedeh and van den Homberg, Marc and Kalimeri, Kyriaki and Kaltenbrunner, Andreas and Mejova, Yelena and Milano, Leonardo and Ndirangu, Pauline and Paolotti, Daniela and Teklesadik, Aklilu and Turner, Monica L. Natural Hazards and Earth System Sciences, 2024.
 
