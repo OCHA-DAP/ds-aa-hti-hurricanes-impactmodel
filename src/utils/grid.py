@@ -19,7 +19,7 @@ shp = blob.load_shp()
 
 def create_grid():
     # Define grid
-    xmin, xmax, ymin, ymax = -75, -71, 17, 21  # Vietnam extremes coordintates
+    xmin, xmax, ymin, ymax = -75, -71, 17, 21  # Haiti extremes coordintates
 
     cell_size = 0.1
     cols = list(np.arange(xmin, xmax + cell_size, cell_size))
