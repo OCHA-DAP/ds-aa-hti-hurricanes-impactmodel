@@ -97,7 +97,7 @@ committed to the repo (which might be problematic if working with sensitive data
 
 ---
 
-[1] Towards a global impact-based forecasting model for tropical cyclones. Kooshki Forooshani, Mersedeh and van den Homberg, Marc and Kalimeri, Kyriaki and Kaltenbrunner, Andreas and Mejova, Yelena and Milano, Leonardo and Ndirangu, Pauline and Paolotti, Daniela and Teklesadik, Aklilu and Turner, Monica L. Natural Hazards and Earth System Sciences, 2024.
+[[1]](https://www.researchgate.net/publication/378179311_Towards_a_global_impact-based_forecasting_model_for_tropical_cyclones) Towards a global impact-based forecasting model for tropical cyclones. Kooshki Forooshani, Mersedeh and van den Homberg, Marc and Kalimeri, Kyriaki and Kaltenbrunner, Andreas and Mejova, Yelena and Milano, Leonardo and Ndirangu, Pauline and Paolotti, Daniela and Teklesadik, Aklilu and Turner, Monica L. Natural Hazards and Earth System Sciences, 2024.
 
 
 ---
