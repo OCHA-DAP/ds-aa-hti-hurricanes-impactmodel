@@ -23,23 +23,18 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
-"""     Load grid data and shapefile        """
-# Load grid-land overlap data
-gdf = blob.load_grid_centroids(complete=False)
-# Load all grid data (include oceans)
-gdf_all = blob.load_grid_centroids(complete=True)
-
-# Centroids
-cent = Centroids.from_geodataframe(gdf)  # grid-land overlap
-cent_all = Centroids.from_geodataframe(gdf_all)  # include oceans
-
-# Load shapefile
-shp = blob.load_shp()
+# Load grid data and shapefile
+def load_input_datasets():
+    # Load grid-land overlap data
+    gdf = blob.load_grid_centroids(complete=False)
+    # Load all grid data (include oceans)
+    gdf_all = blob.load_grid_centroids(complete=True)
+    # Load shapefile
+    shp = blob.load_shp()
+    return gdf, gdf_all, shp
 
 
-"""     Load impact data       """
-
-
+# Load impact data
 def load_impact_data():
     # House impact data / Pop impact data
     df_housing = blob.load_emdat()
@@ -209,7 +204,11 @@ def dataframe_to_csv_bytes(dataframe: pd.DataFrame) -> bytes:
     return csv_buffer.getvalue()
 
 
-def create_windfield_features(tracks, non_impacting_events):
+def create_windfield_features(tracks, non_impacting_events, gdf_all, gdf, save_to_blob=True):
+    # Centroids
+    cent = Centroids.from_geodataframe(gdf)  # grid-land overlap
+    cent_all = Centroids.from_geodataframe(gdf_all)  # include oceans
+
     # TropCyclone class
     tc_all = TropCyclone.from_tracks(
         tracks, centroids=cent_all, store_windfields=True, intensity_thres=0
@@ -244,19 +243,22 @@ def create_windfield_features(tracks, non_impacting_events):
         "affected_pop"
     ] = df_windfield_interpolated_overlap["affected_pop"].astype(bool)
 
-    # Save csv
-    csv_data = dataframe_to_csv_bytes(df_windfield_interpolated_overlap)
-    blob.upload_blob_data(
-        blob_name=PROJECT_PREFIX
-        + "/windfield/output_dir/windfield_data_hti_overlap.csv",
-        data=csv_data,
-    )
+    if save_to_blob:
+        # Save csv
+        csv_data = dataframe_to_csv_bytes(df_windfield_interpolated_overlap)
+        blob.upload_blob_data(
+            blob_name=PROJECT_PREFIX
+            + "/windfield/output_dir/windfield_data_hti_overlap.csv",
+            data=csv_data,
+        )
+    else:
+        return df_windfield_interpolated_overlap
 
 
 """     Metadata of the events      """
 
 
-def create_metadata(tracks, all_events):
+def create_metadata(tracks, all_events, shp, save_to_blob=True):
     df_metadata_fixed = pd.DataFrame()
     for i in range(len(tracks.data)):
         # Basics
@@ -320,15 +322,20 @@ def create_metadata(tracks, all_events):
     # Merge with landfall information
     df_metadata_fixed_complete = df_metadata_fixed.merge(all_events_meta)
 
-    # Save the DataFrame to CSV
-    csv_data = dataframe_to_csv_bytes(df_metadata_fixed_complete)
-    blob.upload_blob_data(
-        blob_name=PROJECT_PREFIX + "/rainfall/input_dir/metadata_typhoons.csv",
-        data=csv_data,
-    )
+    if save_to_blob:
+        # Save the DataFrame to CSV
+        csv_data = dataframe_to_csv_bytes(df_metadata_fixed_complete)
+        blob.upload_blob_data(
+            blob_name=PROJECT_PREFIX + "/rainfall/input_dir/metadata_typhoons.csv",
+            data=csv_data,
+        )
+    else:
+        return df_metadata_fixed_complete
 
 
 if __name__ == "__main__":
+    # Load input datasets
+    gdf, gdf_all, shp = load_input_datasets()
     # Load impact data
     all_events, non_impacting_events = load_impact_data()
     # Get tracks
@@ -337,7 +344,14 @@ if __name__ == "__main__":
     tracks = proccess_storm_tracks(tc_tracks=tc_tracks)
     # Create features
     create_windfield_features(
-        tracks=tracks, non_impacting_events=non_impacting_events
+        tracks=tracks, 
+        non_impacting_events=non_impacting_events,
+        gdf=gdf,
+        gdf_all=gdf_all
     )
     # Create metadata
-    create_metadata(tracks=tracks, all_events=all_events)
+    create_metadata(
+        tracks=tracks, 
+        all_events=all_events,
+        shp=shp
+    )

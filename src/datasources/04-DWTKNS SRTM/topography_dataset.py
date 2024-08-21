@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rasterio
-from osgeo import gdal
+# from osgeo import gdal
 from rasterio.merge import merge
 from rasterstats import zonal_stats
 from shapely.geometry import Point
@@ -21,13 +21,6 @@ from src.utils import blob
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
 """ https://dwtkns.com/srtm30m/ to get the data (must be registered)"""
-
-# Load grid cells
-grid = blob.load_grid(complete=False)
-
-# Load shapefile
-shp = blob.load_shp()
-shp = shp.to_crs("EPSG:4326")
 
 
 def load_hgt_zip_from_blob(blob_path, prod_dev="dev"):
@@ -95,7 +88,7 @@ def merge_raster_tiles(PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
             )
 
 
-def get_topography_features(PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
+def get_topography_features(grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
     # Define paths
     input_blob_path = (
         f"{PROJECT_PREFIX}/topography/input_dir/hti_merged_srtm.tif"
@@ -220,7 +213,7 @@ def get_topography_features(PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
     return df_terrain
 
 
-def get_coast_features():
+def get_coast_features(shp, grid):
     # dissolving polygons into one land mass
     dissolved_shp = shp.dissolve(by="ADM0_PCODE")
 
@@ -252,12 +245,19 @@ def get_coast_features():
 
 
 if __name__ == "__main__":
+    # Load grid cells
+    grid = blob.load_grid(complete=False)
+    # Load shapefile
+    shp = blob.load_shp()
+    shp = shp.to_crs("EPSG:4326")
+
     # Merge raster tiles
     # merge_raster_tiles()
+
     # Topograpgy features (ELEV,SLOPE,RUGG)
-    df_terrain = get_topography_features()
+    df_terrain = get_topography_features(grid=grid)
     # Coast related features
-    grid_coast = get_coast_features()
+    grid_coast = get_coast_features(grid=grid, shp=shp)
 
     # Merge data
     merge_final = df_terrain.merge(grid_coast, on="id", how="left")

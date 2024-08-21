@@ -13,15 +13,15 @@ from shapely.geometry import Polygon
 from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes/grid/"
-# Load shapefile
-shp = blob.load_shp()
 
+def create_grid(cell_size = 0.1, save_to_blob=True):
 
-def create_grid():
+    # Load shapefile
+    shp = blob.load_shp()
+
     # Define grid
     xmin, xmax, ymin, ymax = -75, -71, 17, 21  # Haiti extremes coordintates
 
-    cell_size = 0.1
     cols = list(np.arange(xmin, xmax + cell_size, cell_size))
     rows = list(np.arange(ymin, ymax + cell_size, cell_size))
     rows.reverse()
@@ -38,8 +38,11 @@ def create_grid():
         for x in cols
         for y in rows
     ]
+
+
     grid = gpd.GeoDataFrame({"geometry": polygons}, crs=shp.crs)
     grid["id"] = grid.index + 1
+
 
     # %% Centroids
     # Extract lat and lon from the centerpoint
@@ -53,9 +56,13 @@ def create_grid():
         + "N"
     )
 
+    # Reproject the grid to EPSG pre-defined
+    grid = grid.to_crs(epsg=32618)
+    shp = shp.to_crs(grid.crs)
+
     grid_centroids = grid.copy()
     grid_centroids["geometry"] = grid_centroids["geometry"].centroid
-    grid_centroids.loc[:, "geometry"].plot()
+    # grid_centroids.loc[:, "geometry"].plot()
 
     # %% intersection of grid and shapefile
     adm2_grid_intersection = gpd.overlay(shp, grid, how="identity")
@@ -74,7 +81,9 @@ def create_grid():
     for index, row in grid_muni.iterrows():
         id_cell = row["id"]
         grid_cell = grid_land_overlap[grid_land_overlap.id == id_cell].geometry
-        municipality_polygon = row["geometry"]
+        municipality_polygon = row["geometry"]  # This is already reprojected
+        
+        # Calculate the intersection area
         intersection_area = grid_cell.intersection(municipality_polygon).area
         intersection_areas.append(intersection_area)
 
@@ -102,6 +111,10 @@ def create_grid():
         .rename({"id": "grid_cells"}, axis=1)
         .sort_values("grid_cells", ascending=False)
     )
+    grid = grid.to_crs(epsg='4326').reset_index(drop=True)
+    grid_land_overlap = grid_land_overlap.to_crs(epsg='4326').reset_index(drop=True)
+    grid_centroids = grid_centroids.to_crs(epsg='4326').reset_index(drop=True)
+    grid_land_overlap_centroids = grid_land_overlap_centroids.to_crs(epsg='4326').reset_index(drop=True)
 
     # Save datasets to GeoPackage and CSV
     datasets = {
@@ -117,39 +130,45 @@ def create_grid():
             ["id", "ADM1_FR", "ADM1_PCODE", "ADM1_EN", "ADM2_EN", "ADM2_PCODE"]
         ]
     }
+    if save_to_blob:
+        # Create a temporary directory for saving files
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
 
-    # Create a temporary directory for saving files
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
+            # Save and upload GeoPackage datasets
+            for filename, gdf in datasets.items():
+                local_file_path = (
+                    temp_dir_path / filename.split("/")[-1]
+                )  # Save in temp_dir with filename only
+                gdf.to_file(local_file_path, driver="GPKG")
+                blob_name = f"{PROJECT_PREFIX}{filename}"
 
-        # Save and upload GeoPackage datasets
-        for filename, gdf in datasets.items():
-            local_file_path = (
-                temp_dir_path / filename.split("/")[-1]
-            )  # Save in temp_dir with filename only
-            gdf.to_file(local_file_path, driver="GPKG")
-            blob_name = f"{PROJECT_PREFIX}{filename}"
+                with open(local_file_path, "rb") as file:
+                    data = file.read()
+                    blob.upload_blob_data(
+                        blob_name=blob_name, data=data, prod_dev="dev"
+                    )
 
-            with open(local_file_path, "rb") as file:
-                data = file.read()
-                blob.upload_blob_data(
-                    blob_name=blob_name, data=data, prod_dev="dev"
-                )
+            # Save and upload CSV dataset
+            for filename, df in csv_datasets.items():
+                local_file_path = (
+                    temp_dir_path / filename.split("/")[-1]
+                )  # Save in temp_dir with filename only
+                df.to_csv(local_file_path, index=False)
+                blob_name = f"{PROJECT_PREFIX}{filename}"
 
-        # Save and upload CSV dataset
-        for filename, df in csv_datasets.items():
-            local_file_path = (
-                temp_dir_path / filename.split("/")[-1]
-            )  # Save in temp_dir with filename only
-            df.to_csv(local_file_path, index=False)
-            blob_name = f"{PROJECT_PREFIX}{filename}"
-
-            with open(local_file_path, "rb") as file:
-                data = file.read()
-                blob.upload_blob_data(
-                    blob_name=blob_name, data=data, prod_dev="dev"
-                )
-
+                with open(local_file_path, "rb") as file:
+                    data = file.read()
+                    blob.upload_blob_data(
+                        blob_name=blob_name, data=data, prod_dev="dev"
+                    )
+    else:
+        interest = ['id', 'Centroid', 'geometry']
+        return (grid[interest], 
+                grid_land_overlap[interest], 
+                grid_centroids[interest], 
+                grid_land_overlap_centroids[interest],
+                grid_muni_total[["id", "ADM1_EN" ,"ADM1_PCODE", "ADM2_PCODE"]])
 
 if __name__ == "__main__":
     create_grid()

@@ -13,32 +13,11 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
-# Load Shapefile
-shp = blob.load_shp()
-shp = shp.to_crs("EPSG:4326")
-
-# Load grid cells
-grid_land_overlap = blob.load_grid(complete=False)
-
-# Load ids of municipalities
-ids_mun = blob.load_csv(
-    PROJECT_PREFIX + "/grid/input_dir/grid_municipality_info.csv"
-)
-ids_mun.ADM1_EN = ids_mun.ADM1_EN.str.upper()
-
-# Load impact data
-df_impact = blob.load_emdat()
-
-# Load population data
-grid_pop_df = blob.load_csv(
-    PROJECT_PREFIX + "/settlement/output_dir/hti_population_data.csv"
-)
-
 
 # Add Total pop by ADM1/ADM2 region feature to impact dataset
 # Although this is irrelevant, it's here for completeness since it's relevent
 # for other grid disaggregation definitions.
-def add_pop_info_to_impact_data(grid_pop_df):
+def add_pop_info_to_impact_data(grid_pop_df, ids_mun, df_impact):
     # by ADMIN1
     df_merge_adm1 = (
         grid_pop_df.merge(ids_mun, left_on="id", right_on="id")[
@@ -71,9 +50,13 @@ def add_pop_info_to_impact_data(grid_pop_df):
 
 
 # Impact data to grid level + NO WEATHER CONSTRAINTS
-def impact_to_grid(grid_pop_df):
+def impact_to_grid(grid_pop_df, ids_mun, df_impact, save_to_blob=True):
     # Load impact data + information
-    df_impact_plus = add_pop_info_to_impact_data(grid_pop_df=grid_pop_df)
+    df_impact_plus = add_pop_info_to_impact_data(
+        grid_pop_df=grid_pop_df, 
+        ids_mun=ids_mun,
+        df_impact=df_impact
+        )
     pop_grid = grid_pop_df.merge(ids_mun, on="id")[
         ["id", "total_pop", "ADM1_PCODE", "ADM2_PCODE"]
     ]
@@ -163,17 +146,19 @@ def impact_to_grid(grid_pop_df):
         df_event = df_event.merge(df_event_dmg_with_pop, how="left").fillna(0)
         impact_data_grid_no_weather = pd.concat(
             [impact_data_grid_no_weather, df_event]
+        ).reset_index(drop=True)
+    if save_to_blob:
+        # No Weather constraints
+        csv_data = impact_data_grid_no_weather.to_csv(index=False)
+        blob_path = (
+            PROJECT_PREFIX
+            + "/EMDAT/impact_data_grid_step_disaggregation_no_weather.csv"
         )
 
-    # No Weather constraints
-    csv_data = impact_data_grid_no_weather.to_csv(index=False)
-    blob_path = (
-        PROJECT_PREFIX
-        + "/EMDAT/impact_data_grid_step_disaggregation_no_weather.csv"
-    )
-
-    # Upload the CSV data to blob storage
-    blob.upload_blob_data(blob_name=blob_path, data=csv_data)
+        # Upload the CSV data to blob storage
+        blob.upload_blob_data(blob_name=blob_path, data=csv_data)
+    else:
+        return impact_data_grid_no_weather
 
 
 def load_weather_features():
@@ -200,9 +185,13 @@ def load_weather_features():
     return df_weather
 
 
-def impact_to_grid_weather_constraints(grid_pop_df):
+def impact_to_grid_weather_constraints(grid_pop_df, ids_mun, df_impact, df_weather, save_to_blob=True):
     # Load impact data + information
-    df_impact_plus = add_pop_info_to_impact_data(grid_pop_df=grid_pop_df)
+    df_impact_plus = add_pop_info_to_impact_data(
+        grid_pop_df=grid_pop_df, 
+        ids_mun=ids_mun,
+        df_impact=df_impact
+    )
     pop_grid = grid_pop_df.merge(ids_mun, on="id")[
         ["id", "total_pop", "ADM1_PCODE", "ADM2_PCODE"]
     ]
@@ -240,7 +229,6 @@ def impact_to_grid_weather_constraints(grid_pop_df):
         )
 
     # Apply weather constraints
-    df_weather = load_weather_features()
     pop_dmg_wind_aux = pop_damage_merged_adm1_fixed.merge(df_weather)
     # Just affecting events
     pop_dmg_wind_aux = pop_dmg_wind_aux[
@@ -312,19 +300,41 @@ def impact_to_grid_weather_constraints(grid_pop_df):
         pop_damage_merged_adm1_fixed, how="right"
     )[impact_data_grid.columns].fillna(0)
 
-    # + Weather constraints
-    csv_data = impact_data_grid.to_csv(index=False)
-    blob_path = (
-        PROJECT_PREFIX
-        + "/EMDAT/impact_data_grid_step_disaggregation_weather.csv"
-    )
+    if save_to_blob:
+        # + Weather constraints
+        csv_data = impact_data_grid.to_csv(index=False)
+        blob_path = (
+            PROJECT_PREFIX
+            + "/EMDAT/impact_data_grid_step_disaggregation_weather.csv"
+        )
 
-    # Upload the CSV data to blob storage
-    blob.upload_blob_data(blob_name=blob_path, data=csv_data)
+        # Upload the CSV data to blob storage
+        blob.upload_blob_data(blob_name=blob_path, data=csv_data)
+    else:
+        return impact_data_grid
 
 
 if __name__ == "__main__":
+    # Load ids of municipalities
+    ids_mun = blob.load_csv(
+        PROJECT_PREFIX + "/grid/input_dir/grid_municipality_info.csv"
+    )
+    ids_mun.ADM1_EN = ids_mun.ADM1_EN.str.upper()
+    # Load impact data
+    df_impact = blob.load_emdat()
+    # Load population data
+    grid_pop_df = blob.load_csv(
+        PROJECT_PREFIX + "/settlement/output_dir/hti_population_data.csv"
+    )
     # Impact to grid level
-    impact_to_grid(grid_pop_df=grid_pop_df)
+    impact_to_grid(
+        grid_pop_df=grid_pop_df,
+        ids_mun=ids_mun,
+        df_impact=df_impact)
     # Impact to grid level + weather_constraints
-    impact_to_grid_weather_constraints(grid_pop_df=grid_pop_df)
+    df_weather = load_weather_features()
+    impact_to_grid_weather_constraints(
+        grid_pop_df=grid_pop_df,
+        ids_mun=ids_mun,
+        df_impact=df_impact,
+        df_weather=df_weather)
