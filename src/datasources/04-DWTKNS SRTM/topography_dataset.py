@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rasterio
+
 # from osgeo import gdal
 from rasterio.merge import merge
 from rasterstats import zonal_stats
@@ -88,7 +89,9 @@ def merge_raster_tiles(PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
             )
 
 
-def get_topography_features(grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"):
+def get_topography_features(
+    grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev"
+):
     # Define paths
     input_blob_path = (
         f"{PROJECT_PREFIX}/topography/input_dir/hti_merged_srtm.tif"

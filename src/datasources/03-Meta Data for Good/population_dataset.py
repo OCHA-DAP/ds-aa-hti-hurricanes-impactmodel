@@ -13,7 +13,10 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
-def get_population_data(grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev", save_to_blob=True):
+
+def get_population_data(
+    grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev", save_to_blob=True
+):
     # Define paths
     input_blob_path = (
         f"{PROJECT_PREFIX}/settlement/input_dir/population_hti_2018-10-01.tif"
@@ -37,7 +40,6 @@ def get_population_data(grid, PROJECT_PREFIX=PROJECT_PREFIX, prod_dev="dev", sav
         affine=pop_raster.transform,
     )
     grid_pop = pd.DataFrame(summary_stats)
-
 
     # Merge with grid to get the geometry
     grid_pop_df = pd.concat([grid, grid_pop], axis=1)

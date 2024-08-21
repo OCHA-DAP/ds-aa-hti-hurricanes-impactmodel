@@ -14,8 +14,8 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes/grid/"
 
-def create_grid(cell_size = 0.1, save_to_blob=True):
 
+def create_grid(cell_size=0.1, save_to_blob=True):
     # Load shapefile
     shp = blob.load_shp()
 
@@ -39,10 +39,8 @@ def create_grid(cell_size = 0.1, save_to_blob=True):
         for y in rows
     ]
 
-
     grid = gpd.GeoDataFrame({"geometry": polygons}, crs=shp.crs)
     grid["id"] = grid.index + 1
-
 
     # %% Centroids
     # Extract lat and lon from the centerpoint
@@ -82,7 +80,7 @@ def create_grid(cell_size = 0.1, save_to_blob=True):
         id_cell = row["id"]
         grid_cell = grid_land_overlap[grid_land_overlap.id == id_cell].geometry
         municipality_polygon = row["geometry"]  # This is already reprojected
-        
+
         # Calculate the intersection area
         intersection_area = grid_cell.intersection(municipality_polygon).area
         intersection_areas.append(intersection_area)
@@ -111,10 +109,14 @@ def create_grid(cell_size = 0.1, save_to_blob=True):
         .rename({"id": "grid_cells"}, axis=1)
         .sort_values("grid_cells", ascending=False)
     )
-    grid = grid.to_crs(epsg='4326').reset_index(drop=True)
-    grid_land_overlap = grid_land_overlap.to_crs(epsg='4326').reset_index(drop=True)
-    grid_centroids = grid_centroids.to_crs(epsg='4326').reset_index(drop=True)
-    grid_land_overlap_centroids = grid_land_overlap_centroids.to_crs(epsg='4326').reset_index(drop=True)
+    grid = grid.to_crs(epsg="4326").reset_index(drop=True)
+    grid_land_overlap = grid_land_overlap.to_crs(epsg="4326").reset_index(
+        drop=True
+    )
+    grid_centroids = grid_centroids.to_crs(epsg="4326").reset_index(drop=True)
+    grid_land_overlap_centroids = grid_land_overlap_centroids.to_crs(
+        epsg="4326"
+    ).reset_index(drop=True)
 
     # Save datasets to GeoPackage and CSV
     datasets = {
@@ -163,12 +165,15 @@ def create_grid(cell_size = 0.1, save_to_blob=True):
                         blob_name=blob_name, data=data, prod_dev="dev"
                     )
     else:
-        interest = ['id', 'Centroid', 'geometry']
-        return (grid[interest], 
-                grid_land_overlap[interest], 
-                grid_centroids[interest], 
-                grid_land_overlap_centroids[interest],
-                grid_muni_total[["id", "ADM1_EN" ,"ADM1_PCODE", "ADM2_PCODE"]])
+        interest = ["id", "Centroid", "geometry"]
+        return (
+            grid[interest],
+            grid_land_overlap[interest],
+            grid_centroids[interest],
+            grid_land_overlap_centroids[interest],
+            grid_muni_total[["id", "ADM1_EN", "ADM1_PCODE", "ADM2_PCODE"]],
+        )
+
 
 if __name__ == "__main__":
     create_grid()

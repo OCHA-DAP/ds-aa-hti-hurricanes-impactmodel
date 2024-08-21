@@ -13,6 +13,7 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
+
 def get_IWI(ids_mun, shp, save_to_blob=True, country="Haiti"):
     # Load IWI international
     iwi_dir = (
@@ -55,7 +56,9 @@ def get_IWI(ids_mun, shp, save_to_blob=True, country="Haiti"):
     if save_to_blob:
         # Save to blob
         csv_data = IWI_shp[["grid_point_id", "IWI"]].to_csv(index=False)
-        blob_path = PROJECT_PREFIX + "/vulnerability/output_dir/hti_iwi_bygrid.csv"
+        blob_path = (
+            PROJECT_PREFIX + "/vulnerability/output_dir/hti_iwi_bygrid.csv"
+        )
         blob.upload_blob_data(blob_path, csv_data)
     else:
         return IWI_shp
@@ -71,7 +74,4 @@ if __name__ == "__main__":
     shp = blob.load_shp()
     shp = shp.to_crs("EPSG:4326")
     # Get IWI subnational for Haiti
-    get_IWI(
-        ids_mun=ids_mun, 
-        shp=shp
-        )
+    get_IWI(ids_mun=ids_mun, shp=shp)

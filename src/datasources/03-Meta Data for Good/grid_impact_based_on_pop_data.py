@@ -53,10 +53,8 @@ def add_pop_info_to_impact_data(grid_pop_df, ids_mun, df_impact):
 def impact_to_grid(grid_pop_df, ids_mun, df_impact, save_to_blob=True):
     # Load impact data + information
     df_impact_plus = add_pop_info_to_impact_data(
-        grid_pop_df=grid_pop_df, 
-        ids_mun=ids_mun,
-        df_impact=df_impact
-        )
+        grid_pop_df=grid_pop_df, ids_mun=ids_mun, df_impact=df_impact
+    )
     pop_grid = grid_pop_df.merge(ids_mun, on="id")[
         ["id", "total_pop", "ADM1_PCODE", "ADM2_PCODE"]
     ]
@@ -185,12 +183,12 @@ def load_weather_features():
     return df_weather
 
 
-def impact_to_grid_weather_constraints(grid_pop_df, ids_mun, df_impact, df_weather, save_to_blob=True):
+def impact_to_grid_weather_constraints(
+    grid_pop_df, ids_mun, df_impact, df_weather, save_to_blob=True
+):
     # Load impact data + information
     df_impact_plus = add_pop_info_to_impact_data(
-        grid_pop_df=grid_pop_df, 
-        ids_mun=ids_mun,
-        df_impact=df_impact
+        grid_pop_df=grid_pop_df, ids_mun=ids_mun, df_impact=df_impact
     )
     pop_grid = grid_pop_df.merge(ids_mun, on="id")[
         ["id", "total_pop", "ADM1_PCODE", "ADM2_PCODE"]
@@ -328,13 +326,13 @@ if __name__ == "__main__":
     )
     # Impact to grid level
     impact_to_grid(
-        grid_pop_df=grid_pop_df,
-        ids_mun=ids_mun,
-        df_impact=df_impact)
+        grid_pop_df=grid_pop_df, ids_mun=ids_mun, df_impact=df_impact
+    )
     # Impact to grid level + weather_constraints
     df_weather = load_weather_features()
     impact_to_grid_weather_constraints(
         grid_pop_df=grid_pop_df,
         ids_mun=ids_mun,
         df_impact=df_impact,
-        df_weather=df_weather)
+        df_weather=df_weather,
+    )

@@ -23,6 +23,7 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
+
 # Load grid data and shapefile
 def load_input_datasets():
     # Load grid-land overlap data
@@ -204,7 +205,9 @@ def dataframe_to_csv_bytes(dataframe: pd.DataFrame) -> bytes:
     return csv_buffer.getvalue()
 
 
-def create_windfield_features(tracks, non_impacting_events, gdf_all, gdf, save_to_blob=True):
+def create_windfield_features(
+    tracks, non_impacting_events, gdf_all, gdf, save_to_blob=True
+):
     # Centroids
     cent = Centroids.from_geodataframe(gdf)  # grid-land overlap
     cent_all = Centroids.from_geodataframe(gdf_all)  # include oceans
@@ -326,7 +329,8 @@ def create_metadata(tracks, all_events, shp, save_to_blob=True):
         # Save the DataFrame to CSV
         csv_data = dataframe_to_csv_bytes(df_metadata_fixed_complete)
         blob.upload_blob_data(
-            blob_name=PROJECT_PREFIX + "/rainfall/input_dir/metadata_typhoons.csv",
+            blob_name=PROJECT_PREFIX
+            + "/rainfall/input_dir/metadata_typhoons.csv",
             data=csv_data,
         )
     else:
@@ -344,14 +348,10 @@ if __name__ == "__main__":
     tracks = proccess_storm_tracks(tc_tracks=tc_tracks)
     # Create features
     create_windfield_features(
-        tracks=tracks, 
+        tracks=tracks,
         non_impacting_events=non_impacting_events,
         gdf=gdf,
-        gdf_all=gdf_all
+        gdf_all=gdf_all,
     )
     # Create metadata
-    create_metadata(
-        tracks=tracks, 
-        all_events=all_events,
-        shp=shp
-    )
+    create_metadata(tracks=tracks, all_events=all_events, shp=shp)

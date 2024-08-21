@@ -18,6 +18,7 @@ from src.utils import blob
 
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
+
 def load_metadata():
     # Load and clean the typhoon metadata
     # We really only care about the landfall date
@@ -36,6 +37,7 @@ def load_grid():
     grid_land_overlap["id"] = grid_land_overlap["id"].astype(int)
     return grid_land_overlap
 
+
 def get_credentials():
     # To create an account for downloading the data
     # follow the instructions here: https://registration.pps.eosdis.nasa.gov/registration/
@@ -45,7 +47,6 @@ def get_credentials():
     USERNAME = getpass.getpass(prompt="Username: ", stream=None)
     PASSWORD = getpass.getpass(prompt="Password: ", stream=None)
     return USERNAME, PASSWORD
-
 
 
 def list_files(url, USERNAME, PASSWORD):
@@ -106,7 +107,13 @@ def download_rainfall_data(USERNAME, PASSWORD, DAYS_TO_LANDFALL=2):
         )
 
 
-def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_blob=True, local_path=None):
+def create_rainfall_dataset(
+    grid,
+    prod_dev="dev",
+    save_to_blob=True,
+    load_from_blob=True,
+    local_path=None,
+):
     if load_from_blob:
         # Path to GPM data
         gpm_folder_path = (
@@ -121,8 +128,9 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
         ]
     else:
         # For working outside the blob
-        typhoon_list = [item for item in (os.listdir(local_path)) if item != ".DS_Store"]
-    
+        typhoon_list = [
+            item for item in (os.listdir(local_path)) if item != ".DS_Store"
+        ]
 
     stats_list = ["mean", "max"]
     j = 0
@@ -132,7 +140,7 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
         print(typ, j)
         j += 1
         if load_from_blob:
-        # Get the list of days for this typhoon from the blob storage
+            # Get the list of days for this typhoon from the blob storage
             typhoon_path = f"{gpm_folder_path}{typ}/GPM/"
             day_list = [
                 blob.split("/")[-2]
@@ -142,7 +150,11 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
                 if blob.endswith("/")
             ]
         else:
-            day_list = [item for item in (os.listdir(local_path/ f"{typ}/GPM")) if item != ".DS_Store"]
+            day_list = [
+                item
+                for item in (os.listdir(local_path / f"{typ}/GPM"))
+                if item != ".DS_Store"
+            ]
 
         day_df = pd.DataFrame()
         for day in day_list:
@@ -156,8 +168,11 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
                     if blob.startswith("3B-HHR")
                 ]
             else:
-                file_list = [item for item in (os.listdir(local_path / f"{typ}/GPM/{day}")) if item.startswith("3B-HHR")]
-
+                file_list = [
+                    item
+                    for item in (os.listdir(local_path / f"{typ}/GPM/{day}"))
+                    if item.startswith("3B-HHR")
+                ]
 
             file_df = pd.DataFrame()
 
@@ -165,10 +180,14 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
                 if load_from_blob:
                     file_path = f"{day_path}{file}"
                     input_raster = rasterio.open(
-                        BytesIO(blob.load_blob_data(file_path, prod_dev=prod_dev))
+                        BytesIO(
+                            blob.load_blob_data(file_path, prod_dev=prod_dev)
+                        )
                     )
                 else:
-                    input_raster = rasterio.open(local_path / f"{typ}/GPM/{day}/{file}")
+                    input_raster = rasterio.open(
+                        local_path / f"{typ}/GPM/{day}/{file}"
+                    )
                 array = input_raster.read(1)
                 summary_stats = zonal_stats(
                     grid,
@@ -182,7 +201,11 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
                 # change values by dividing by 10 to mm/hr
                 grid_stats[stats_list] /= 10
                 grid_merged = pd.merge(
-                    grid.drop(["geometry", "Longitude", "Latitude"], axis=1, errors='ignore'),
+                    grid.drop(
+                        ["geometry", "Longitude", "Latitude"],
+                        axis=1,
+                        errors="ignore",
+                    ),
                     grid_stats,
                     left_index=True,
                     right_index=True,
@@ -219,24 +242,27 @@ def create_rainfall_dataset(grid, prod_dev="dev", save_to_blob=True, load_from_b
                     blob_name=blob_name, data=csv_data, prod_dev=prod_dev
                 )
             else:
-                if stats == 'mean':
-                    day_wide['typhoon'] = typ
-                    day_wide['stat'] = stats
+                if stats == "mean":
+                    day_wide["typhoon"] = typ
+                    day_wide["stat"] = stats
                     typhoon_mean = pd.concat([typhoon_mean, day_wide])
                 else:
-                    day_wide['typhoon'] = typ
-                    day_wide['stat'] = stats
+                    day_wide["typhoon"] = typ
+                    day_wide["stat"] = stats
                     typhoon_max = pd.concat([typhoon_max, day_wide])
 
-    if save_to_blob==False:
+    if save_to_blob == False:
         return typhoon_mean, typhoon_max
 
-def compute_stats(prod_dev="dev", 
-                  load_from_blob=True, 
-                  save_to_blob=True, 
-                  typhoon_mean=None, 
-                  typhoon_max=None,
-                  stat_list=['mean', 'max']):
+
+def compute_stats(
+    prod_dev="dev",
+    load_from_blob=True,
+    save_to_blob=True,
+    typhoon_mean=None,
+    typhoon_max=None,
+    stat_list=["mean", "max"],
+):
     # Load metadata
     typhoon_metadata = load_metadata()
 
@@ -274,11 +300,15 @@ def compute_stats(prod_dev="dev",
                 df_rainfall = blob.load_csv(processed_file_path)
             else:
                 if stats == "mean":
-                    df_rainfall = typhoon_mean[typhoon_mean.typhoon==typ]
-                    df_rainfall = df_rainfall.drop(['typhoon', 'stat'], axis=1, errors='ignore')
-                elif stats == 'max':
-                    df_rainfall = typhoon_max[typhoon_max.typhoon==typ]
-                    df_rainfall = df_rainfall.drop(['typhoon', 'stat'], axis=1, errors='ignore')
+                    df_rainfall = typhoon_mean[typhoon_mean.typhoon == typ]
+                    df_rainfall = df_rainfall.drop(
+                        ["typhoon", "stat"], axis=1, errors="ignore"
+                    )
+                elif stats == "max":
+                    df_rainfall = typhoon_max[typhoon_max.typhoon == typ]
+                    df_rainfall = df_rainfall.drop(
+                        ["typhoon", "stat"], axis=1, errors="ignore"
+                    )
             # Convert column names to date format
             for col in df_rainfall.columns[2:]:
                 date_format = dt.datetime.strptime(col, "%Y%m%d_%H:%M:%S")
@@ -296,20 +326,20 @@ def compute_stats(prod_dev="dev",
             # Fix for rolling without using the axis keyword
             df_mean_rainfall["rainfall_max_6h"] = (
                 df_rainfall.iloc[:, 2:]
-                .T  # transpose first
-                .rolling(time_frame_6)  # omit the axis keyword, defaults to axis=0
+                .T.rolling(  # transpose first
+                    time_frame_6
+                )  # omit the axis keyword, defaults to axis=0
                 .mean()
-                .T  # transpose back to the original orientation
-                .max(axis=1)
+                .T.max(axis=1)  # transpose back to the original orientation
             )
 
             df_mean_rainfall["rainfall_max_24h"] = (
                 df_rainfall.iloc[:, 2:]
-                .T  # transpose first
-                .rolling(time_frame_24)  # omit the axis keyword, defaults to axis=0
+                .T.rolling(  # transpose first
+                    time_frame_24
+                )  # omit the axis keyword, defaults to axis=0
                 .mean()
-                .T  # transpose back to the original orientation
-                .max(axis=1)
+                .T.max(axis=1)  # transpose back to the original orientation
             )
             df_mean_rainfall["rainfall_Total"] = 0.5 * df_rainfall[
                 available_dates_t
@@ -328,7 +358,7 @@ def compute_stats(prod_dev="dev",
             df_rainfall_final = pd.concat(
                 [df_rainfall_final, df_rainfall_single]
             )
-        print('Iteration finished')
+        print("Iteration finished")
         if save_to_blob:
             # Save the DataFrame to CSV and upload to blob storage
             csv_data = df_rainfall_final.to_csv(index=False)
@@ -337,10 +367,14 @@ def compute_stats(prod_dev="dev",
                 blob_name=output_blob_name, data=csv_data, prod_dev=prod_dev
             )
         else:
-            if stats == 'mean':
-                df_rainfall_final_mean = pd.concat([df_rainfall_final_mean, df_rainfall_final])
+            if stats == "mean":
+                df_rainfall_final_mean = pd.concat(
+                    [df_rainfall_final_mean, df_rainfall_final]
+                )
             else:
-                df_rainfall_final_max = pd.concat([df_rainfall_final_max, df_rainfall_final])  
+                df_rainfall_final_max = pd.concat(
+                    [df_rainfall_final_max, df_rainfall_final]
+                )
     if save_to_blob == False:
         return df_rainfall_final_mean, df_rainfall_final_max
 
