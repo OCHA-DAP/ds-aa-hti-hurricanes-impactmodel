@@ -25,7 +25,7 @@ def create_stationary_features(cell_size):
     shp = shp.to_crs("EPSG:4326")
 
     # Add the directory containing wind_to_grid.py and wind_functions.py to the system path
-    sys.path.append(os.path.abspath("src/datasources/04-DWTKNS SRTM"))
+    sys.path.append(os.path.abspath("../src/datasources/04-DWTKNS SRTM"))
 
     # Import the wind_to_grid module for SRTM data
     srtm = importlib.import_module("topography_dataset")
@@ -52,7 +52,7 @@ def create_stationary_features(cell_size):
 
     # Add the directory containing building data to the system path
     sys.path.append(
-        os.path.abspath("src/datasources/06-Google Open Buildings")
+        os.path.abspath("../src/datasources/06-Google Open Buildings")
     )
 
     # Import the module for building data
@@ -78,7 +78,7 @@ def create_stationary_features(cell_size):
     )
 
     # Add the directory containing IWI data to the system path
-    sys.path.append(os.path.abspath("src/datasources/05-IWI"))
+    sys.path.append(os.path.abspath("../src/datasources/05-IWI"))
 
     # Import the module for IWI data
     iwi = importlib.import_module("IWI_by_grid")

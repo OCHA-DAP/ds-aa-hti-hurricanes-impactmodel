@@ -10,9 +10,9 @@ from typing import Literal
 import geopandas as gpd
 import pandas as pd
 from azure.storage.blob import ContainerClient
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv(), override=True)
 PROD_BLOB_SAS = os.getenv("PROD_BLOB_SAS")
 if PROD_BLOB_SAS:
     PROD_BLOB_BASE_URL = "https://imb0chd0prod.blob.core.windows.net/"
@@ -29,7 +29,6 @@ else:
     prod_container_client = ""
 
 DEV_BLOB_SAS = os.getenv("DEV_BLOB_SAS")
-
 
 DEV_BLOB_BASE_URL = "https://imb0chd0dev.blob.core.windows.net/"
 DEV_BLOB_PROJ_BASE_URL = DEV_BLOB_BASE_URL + "isi"

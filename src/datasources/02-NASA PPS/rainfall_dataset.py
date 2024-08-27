@@ -19,10 +19,13 @@ from src.utils import blob
 PROJECT_PREFIX = "ds-aa-hti-hurricanes"
 
 
-def load_metadata():
+def load_metadata(load_from_blob=True, typhoon_metadata=None):
     # Load and clean the typhoon metadata
     # We really only care about the landfall date
-    typhoon_metadata = blob.load_metadata().set_index("typhoon")
+    if load_from_blob:
+        typhoon_metadata = blob.load_metadata().set_index("typhoon")
+    else:
+        typhoon_metadata = typhoon_metadata.set_index("typhoon")
 
     for colname in ["startdate", "enddate", "landfalldate"]:
         typhoon_metadata[colname] = pd.to_datetime(
@@ -258,13 +261,17 @@ def create_rainfall_dataset(
 def compute_stats(
     prod_dev="dev",
     load_from_blob=True,
+    load_meta_from_blob=True,
     save_to_blob=True,
     typhoon_mean=None,
     typhoon_max=None,
     stat_list=["mean", "max"],
+    typhoon_metadata=None,
 ):
     # Load metadata
-    typhoon_metadata = load_metadata()
+    typhoon_metadata = load_metadata(
+        load_from_blob=load_meta_from_blob, typhoon_metadata=typhoon_metadata
+    )
 
     typhoon_metadata["landfall_date_time"] = (
         typhoon_metadata["landfalldate"].astype(str)

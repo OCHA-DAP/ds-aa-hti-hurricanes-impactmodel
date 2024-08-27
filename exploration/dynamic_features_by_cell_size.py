@@ -89,8 +89,12 @@ def create_dynamic_features(cell_size, rain_dir):
         grid_muni,
     ) = grid.create_grid(cell_size=cell_size, save_to_blob=False)
 
+    # Load shapefile
+    shp = blob.load_shp()
+    shp = shp.to_crs("EPSG:4326")
+
     # Load wind data
-    sys.path.append(os.path.abspath("src/datasources/01-IbTracks"))
+    sys.path.append(os.path.abspath("../src/datasources/01-IbTracks"))
     wind = importlib.import_module("wind_to_grid")
 
     # Load impact data and process storm tracks
@@ -108,7 +112,7 @@ def create_dynamic_features(cell_size, rain_dir):
     )
 
     # Load rain data
-    sys.path.append(os.path.abspath("src/datasources/02-NASA PPS"))
+    sys.path.append(os.path.abspath("../src/datasources/02-NASA PPS"))
     rain = importlib.import_module("rainfall_dataset")
 
     typhoon_mean, typhoon_max = rain.create_rainfall_dataset(
@@ -118,17 +122,26 @@ def create_dynamic_features(cell_size, rain_dir):
         local_path=rain_dir,
     )
 
-    df_meta = rain.load_metadata()
+    # df_meta = wind.create_metadata(
+    #     tracks=tracks,
+    #     all_events=all_events,
+    #     shp=shp,
+    #     save_to_blob=False
+    # )
     df_rainfall_mean, df_rainfall_max = rain.compute_stats(
         load_from_blob=False,
+        load_meta_from_blob=True,
         save_to_blob=False,
         typhoon_mean=typhoon_mean,
         typhoon_max=typhoon_max,
         stat_list=["mean"],
+        # typhoon_metadata=df_meta
     )
 
     # Load population and impact data
-    sys.path.append(os.path.abspath("src/datasources/03-Meta Data for Good"))
+    sys.path.append(
+        os.path.abspath("../src/datasources/03-Meta Data for Good")
+    )
     population = importlib.import_module("population_dataset")
     impact = importlib.import_module("grid_impact_based_on_pop_data")
 

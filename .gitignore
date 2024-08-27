@@ -148,3 +148,6 @@ token.json
 .DS_Store
 
 sandbox
+
+# Nohup files
+nohup.out
