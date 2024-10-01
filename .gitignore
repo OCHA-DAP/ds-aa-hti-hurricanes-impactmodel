@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 wheels/
+temp/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
@@ -147,3 +148,6 @@ token.json
 .DS_Store
 
 sandbox
+
+# Nohup files
+nohup.out
